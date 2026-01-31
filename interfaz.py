@@ -4,9 +4,9 @@
 # Modified with GUI, ConnTest fix, startup delay and logging improvements
 
 from datetime import datetime
-from time import sleep
 import time
 import threading
+import ctypes
 
 from dnslib import DNSLabel, QTYPE, RD, RR
 from dnslib import A, AAAA, CNAME, MX, NS, SOA, TXT
@@ -21,17 +21,6 @@ from tkinter import scrolledtext, messagebox
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
 # ----------------- Utilidades -----------------
-
-def get_platform():
-    platforms = {
-        'linux1' : 'Linux',
-        'linux2' : 'Linux',
-        'darwin' : 'OS X',
-        'win32' : 'Windows'
-    }
-    if sys.platform not in platforms:
-        return sys.platform
-    return platforms[sys.platform]
 
 def get_ip():
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -50,20 +39,56 @@ MY_IP = get_ip()
 # ----------------- GUI -----------------
 
 root = tk.Tk()
-root.title("Sooramaru's DNS DS - RiiConnect24 Fork")
-root.geometry("750x520")
 
-ip_label = tk.Label(root, text=f"Primary DNS: {MY_IP}    Secondary DNS: 1.1.1.1", font=("Arial", 11))
+ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(
+    "sooramaru.dns.server.v1"
+)
+
+root.title("Sooramaru's DNS DS - RiiConnect24 Fork")
+root.geometry("800x520")
+root.configure(bg="black")
+root.iconbitmap("icono.ico")
+
+# ❌ Quitar maximizar (solo minimizar)
+root.resizable(False, False)
+
+# -------- Layout principal --------
+
+main_frame = tk.Frame(root, bg="black")
+main_frame.pack(fill="both", expand=True)
+
+left_frame = tk.Frame(main_frame, bg="black")
+left_frame.pack(fill="both", expand=True)
+
+# -------- Labels superiores --------
+
+ip_label = tk.Label(
+    left_frame,
+    text=f"Primary DNS: {MY_IP}    Secondary DNS: 1.1.1.1",
+    font=("Arial", 11),
+    bg="black",
+    fg="#00ff00"
+)
 ip_label.pack(pady=5)
 
 credit_label = tk.Label(
-    root,
+    left_frame,
     text="Sooramaru's DNS DS  |  forked from RiiConnect24 (Git)",
-    font=("Arial", 10, "italic")
+    font=("Arial", 10, "italic"),
+    bg="black",
+    fg="#00ff00"
 )
 credit_label.pack(pady=2)
 
-log_box = scrolledtext.ScrolledText(root, state="disabled")
+# -------- Log estilo terminal --------
+
+log_box = scrolledtext.ScrolledText(
+    left_frame,
+    state="disabled",
+    bg="black",
+    fg="#00ff00",
+    insertbackground="#00ff00"
+)
 log_box.pack(fill="both", expand=True, padx=10, pady=10)
 
 def gui_log(text):
@@ -72,7 +97,7 @@ def gui_log(text):
     log_box.configure(state="disabled")
     log_box.yview("end")
 
-# Mostrar créditos al iniciar
+# Mensaje inicial
 gui_log("==============================================")
 gui_log(" Sooramaru's DNS DS")
 gui_log(" forked from RiiConnect24 (Git)")
@@ -103,7 +128,7 @@ class RiiConnect24DNSLogger(object):
     def log_data(self, dnsobj):
         pass
 
-# ----------------- Registros DNS (original) -----------------
+# ----------------- Registros DNS -----------------
 
 EPOCH = datetime(1970, 1, 1)
 SERIAL = int((datetime.utcnow() - EPOCH).total_seconds())
@@ -192,7 +217,6 @@ class Resolver:
             return reply
         # --------------------------------
 
-        # ---- LÓGICA ORIGINAL ----
         reply = request.reply()
         zone = self.zones.get(request.q.qname)
 
@@ -271,7 +295,6 @@ def start_server():
             for s in servers:
                 s.start_thread()
 
-            # Iniciar HTTP conntest
             threading.Thread(target=start_conntest_server, daemon=True).start()
 
             running = True
@@ -299,7 +322,7 @@ def stop_server():
 
 # ----------------- Botones -----------------
 
-frame = tk.Frame(root)
+frame = tk.Frame(left_frame, bg="black")
 frame.pack(pady=5)
 
 tk.Button(frame, text="Iniciar servidor", width=20, command=start_server).pack(side="left", padx=10)
